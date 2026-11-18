@@ -5,6 +5,7 @@ import * as store from './store.js';
 import { startScan, stopScan } from './scan.js';
 import { PHOTOS } from './photos.js';
 import { Q2, QUIZ, SORT, REACT } from './extra.js';
+import { REWARDS, CERTS, MEDAL_PHOTO, rewardIcon } from './rewards.js';
 
 const view = document.getElementById('view');
 const scanner = document.getElementById('scanner');
@@ -97,6 +98,7 @@ function homeView() {
     <h2>更多玩法</h2>
     <a class="more-row" href="#/games"><span>快問快答</span><span class="more-sub">每種動物 6 題是非題，10 秒內作答</span></a>
     <a class="more-row" href="#/games"><span>作息排排看</span><span class="more-sub">把動物的活動放到早晨、正午、傍晚</span></a>
+    <a class="more-row" href="#/badges"><span>集徽章換好禮</span><span class="more-sub">集滿徽章可兌換牧場小點心與證書</span></a>
   </section>
   <section class="block print">
     <h2>手上沒有觀察牌？</h2>
@@ -228,7 +230,7 @@ function renderPlay() {
         <p class="answer-note">${o.note}</p>
       </div>
       ${ok ? '' : `<p class="retry-hint">想一想${a.name}在${timeLabel(ctx.time)}、${weatherLabel(ctx.weather)}的時候需要什麼，再試一次。</p>`}
-      ${badges.map(b => `<div class="earned">${badgeSVG(b.icon, true)}<div><p class="earned-label">獲得新徽章</p><p class="earned-name">${b.name}</p></div></div>`).join('')}
+      ${badges.map(b => earnedHTML(b)).join('')}
       <div class="actions">
         ${!ok ? `<button type="button" class="btn btn-primary" data-act="retry">再試一次</button>`
           : !last ? `<button type="button" class="btn btn-primary" data-act="next-q">下一題</button>`
@@ -325,7 +327,7 @@ function renderQuiz() {
       <div class="score"><span class="big">${quiz.score}</span><span> / ${n}</span></div>
       <div class="stars" aria-label="${stars} 顆星">${[0, 1, 2].map(i => `<svg viewBox="0 0 24 24" class="${i < stars ? 'on' : ''}" aria-hidden="true"><path d="M12 3.5 L14.6 9 L20.5 9.6 L16 13.6 L17.3 19.5 L12 16.5 L6.7 19.5 L8 13.6 L3.5 9.6 L9.4 9 Z"/></svg>`).join('')}</div>
       <p class="lead">${quiz.score === n ? `全對！你是${a.name}專家。` : quiz.score >= 4 ? '很不錯，再玩一次挑戰全對。' : '多看幾次圖鑑，再來挑戰。'}最高連續答對 ${quiz.best} 題。</p>
-      ${(quiz.newBadges || []).map(b => `<div class="earned">${badgeSVG(b.icon, true)}<div><p class="earned-label">獲得新徽章</p><p class="earned-name">${b.name}</p></div></div>`).join('')}
+      ${(quiz.newBadges || []).map(b => earnedHTML(b)).join('')}
       <div class="actions">
         <button type="button" class="btn btn-primary" data-q="again">再玩一次</button>
         <a class="btn" href="#/games">換一種動物</a>
@@ -429,7 +431,7 @@ function renderSort() {
       ${sorter.cards.map((c, i) => placed.has(i) ? '' : `<button type="button" class="card ${sorter.pick === i ? 'picked' : ''}" data-card="${i}">${c.text}</button>`).join('')}
     </div>
     ${allRight ? `<div class="quiz-feedback is-ok"><p class="verdict-sm">全部正確</p><p>${a.name}的作息會跟著時間和溫度改變：涼爽的時候活動，最熱的時候休息。</p></div>
-      ${(sorter.newBadges || []).map(b => `<div class="earned">${badgeSVG(b.icon, true)}<div><p class="earned-label">獲得新徽章</p><p class="earned-name">${b.name}</p></div></div>`).join('')}
+      ${(sorter.newBadges || []).map(b => earnedHTML(b)).join('')}
       <div class="actions"><a class="btn btn-primary" href="#/games">玩其他動物</a><a class="btn" href="#/quiz/${a.id}">挑戰快問快答</a></div>`
       : sorter.checked ? `<div class="quiz-feedback is-no"><p class="verdict-sm">還差一點</p><p>標示錯誤的卡片再換個位置試試看。</p></div>`
       : ''}
@@ -561,21 +563,58 @@ function bookDetail(id) {
   </section>`;
 }
 
+function medalHTML(b, earned, extra = '') {
+  const p = MEDAL_PHOTO[b.id];
+  const inner = p && PHOTOS.has(p) ? `<img src="assets/scenes/${p}.webp" alt="" decoding="async">` : badgeSVG(b.icon, earned);
+  return `<span class="medal ${earned ? 'on' : 'off'} ${extra}">${inner}${earned ? '' : '<i class="medal-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="11" width="12" height="9" rx="2"/><path d="M9 11 V8 A3 3 0 0 1 15 8 V11"/></svg></i>'}</span>`;
+}
+
+function earnedHTML(b) {
+  return `<div class="earned">${medalHTML(b, true, 'medal-sm')}<div><p class="earned-label">獲得新徽章</p><p class="earned-name">${b.name}</p></div></div>`;
+}
+
+function fmtDate(t) {
+  const d = new Date(t);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function rewardRowHTML(r, count) {
+  const ok = count >= r.need;
+  const v = store.voucher(r.id);
+  let action;
+  if (!ok) action = `<span class="r-state">還差 ${r.need - count} 枚</span>`;
+  else if (r.type === 'cert') action = `<a class="r-btn" href="#/cert/${r.id}">領取證書</a>`;
+  else if (!v) action = `<a class="r-btn on" href="#/voucher/${r.id}">領取兌換券</a>`;
+  else if (v.used) action = `<a class="r-btn done" href="#/voucher/${r.id}">已兌換</a>`;
+  else action = `<a class="r-btn on" href="#/voucher/${r.id}">查看兌換券</a>`;
+  return `<li class="reward ${ok ? 'unlocked' : ''}">
+    <span class="r-icon">${rewardIcon(r.icon)}</span>
+    <div class="r-text"><p class="r-need">集滿 ${r.need} 枚</p><p class="r-name">${r.name}</p></div>
+    ${action}
+  </li>`;
+}
+
 function badgesView() {
   setTabs('badges');
   const earned = store.earnedBadges();
-  const n = store.correctCount();
+  const count = earned.size;
+  const next = REWARDS.find(r => r.need > count);
   view.innerHTML = `
   <section class="page">
-    <p class="eyebrow">徽章</p>
+    <p class="eyebrow">徽章與兌換</p>
     <h1 class="title">我的徽章</h1>
     <div class="progress">
-      <p><span class="big">${n}</span> / ${store.TOTAL_SCENES} 個情境完成</p>
-      <div class="bar"><span style="width:${Math.round(n / store.TOTAL_SCENES * 100)}%"></span></div>
+      <p><span class="big">${count}</span> / ${BADGES.length} 枚徽章</p>
+      <div class="bar"><span style="width:${Math.round(count / BADGES.length * 100)}%"></span></div>
+      <p class="hint">${next ? `再收集 ${next.need - count} 枚，就能兌換「${next.name}」。` : '全部集滿了，恭喜你成為飛牛小牧場主。'}</p>
     </div>
-    <ul class="badges">
-      ${BADGES.map(b => `<li class="${earned.has(b.id) ? 'earned-b' : ''}">${badgeSVG(b.icon, earned.has(b.id))}<p class="b-name">${b.name}</p><p class="b-rule">${earned.has(b.id) ? '已獲得' : b.rule}</p></li>`).join('')}
+    <ul class="medals">
+      ${BADGES.map(b => `<li class="${earned.has(b.id) ? 'earned-b' : ''}">${medalHTML(b, earned.has(b.id))}<p class="b-name">${b.name}</p><p class="b-rule">${earned.has(b.id) ? '已獲得' : b.rule}</p></li>`).join('')}
     </ul>
+    <h2 class="rewards-title">集徽章，換牧場好禮</h2>
+    <ul class="rewards">${REWARDS.map(r => rewardRowHTML(r, count)).join('')}</ul>
+    <p class="note">以上兌換內容為課堂提案示意，實際獎品與兌換方式需經飛牛牧場評估。兌換紀錄只存在這支手機的瀏覽器中。</p>
     <button type="button" class="link danger" id="reset">清除我的紀錄</button>
   </section>`;
   const btn = document.getElementById('reset');
@@ -585,8 +624,148 @@ function badgesView() {
       badgesView();
     } else {
       btn.dataset.armed = '1';
-      btn.textContent = '再按一次確認清除（無法復原）';
+      btn.textContent = '再按一次確認清除（兌換券也會一起清除，無法復原）';
     }
+  });
+}
+
+function voucherView(id) {
+  const r = REWARDS.find(x => x.id === id && x.type === 'voucher');
+  if (!r) return notFound();
+  setTabs('badges');
+  const count = store.earnedBadges().size;
+  if (count < r.need) {
+    view.innerHTML = `<section class="page"><a class="link back" href="#/badges">← 徽章</a><h1 class="title">還沒集滿</h1><p class="lead">集滿 ${r.need} 枚徽章才能兌換「${r.name}」，目前有 ${count} 枚。</p><a class="btn btn-primary" href="#/games">去玩遊戲</a></section>`;
+    return;
+  }
+  const v = store.issueVoucher(id);
+  const name = store.getName();
+  view.innerHTML = `
+  <section class="page">
+    <a class="link back" href="#/badges">← 徽章</a>
+    <div class="voucher ${v.used ? 'used' : ''}">
+      <div class="v-top">
+        <p class="v-brand">飛牛牧場　動物作息大挑戰</p>
+        <p class="v-kind">兌換券</p>
+      </div>
+      <div class="v-body">
+        <span class="v-icon">${rewardIcon(r.icon)}</span>
+        <p class="v-name">${r.name}</p>
+        <p class="v-desc">${r.desc}</p>
+      </div>
+      <div class="v-cut" aria-hidden="true"></div>
+      <dl class="v-meta">
+        <div><dt>兌換編號</dt><dd class="v-code">${v.code}</dd></div>
+        <div><dt>領取時間</dt><dd>${fmtDate(v.issued)}</dd></div>
+        ${name ? `<div><dt>持有人</dt><dd>${name}</dd></div>` : ''}
+        <div><dt>狀態</dt><dd class="v-status">${v.used ? `已兌換　${fmtDate(v.used)}` : '可兌換'}</dd></div>
+      </dl>
+      ${v.used ? '<p class="v-stamp">已兌換</p>' : ''}
+    </div>
+    ${v.used ? '' : `<p class="hint v-hint">請把這個畫面出示給牧場工作人員。核銷由工作人員操作，按下後就不能再使用。</p>
+    <button type="button" class="btn" id="redeem">工作人員核銷</button>`}
+    <p class="note">本兌換券為課堂提案示意，實際兌換需經飛牛牧場評估。</p>
+  </section>`;
+  const btn = document.getElementById('redeem');
+  if (btn) btn.addEventListener('click', () => {
+    if (btn.dataset.armed) {
+      store.redeemVoucher(id);
+      buzz(true);
+      voucherView(id);
+    } else {
+      btn.dataset.armed = '1';
+      btn.textContent = '確認核銷（核銷後無法復原）';
+      btn.classList.add('btn-primary');
+    }
+  });
+}
+
+function loadImage(src) {
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+}
+
+async function drawCert(id, name) {
+  const c = CERTS[id];
+  const W = 1080, H = 1440;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  try { await document.fonts.load('600 40px "FN Serif"'); await document.fonts.load('400 20px "FN Sans"'); } catch {}
+  const serif = '"FN Serif", "Noto Serif TC", serif';
+  const sans = '"FN Sans", "PingFang TC", "Noto Sans TC", sans-serif';
+  g.fillStyle = '#FBF9F4'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#B08A62'; g.lineWidth = 4; g.strokeRect(48, 48, W - 96, H - 96);
+  g.lineWidth = 1.5; g.strokeRect(66, 66, W - 132, H - 132);
+  try {
+    const img = await loadImage('assets/scenes/hero.webp');
+    const x = 120, y = 130, w = W - 240, h = 560;
+    g.save();
+    const r = 24;
+    g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); g.clip();
+    const s = Math.max(w / img.width, h / img.height);
+    g.drawImage(img, x + (w - img.width * s) / 2, y + (h - img.height * s) / 2, img.width * s, img.height * s);
+    g.restore();
+  } catch {}
+  g.textAlign = 'center';
+  g.fillStyle = '#6B6358'; g.font = `400 30px ${sans}`;
+  g.fillText('飛 牛 牧 場　動 物 作 息 大 挑 戰', W / 2, 780);
+  g.fillStyle = '#2B2620'; g.font = `600 96px ${serif}`;
+  g.fillText(c.title, W / 2, 900);
+  g.fillStyle = '#5E7A4C'; g.font = `600 34px ${serif}`;
+  g.fillText('證　書', W / 2, 960);
+  g.strokeStyle = '#E2DCD1'; g.lineWidth = 2; g.beginPath(); g.moveTo(240, 1010); g.lineTo(W - 240, 1010); g.stroke();
+  g.fillStyle = '#2B2620'; g.font = `600 56px ${serif}`;
+  g.fillText(name || '牧場的好朋友', W / 2, 1090);
+  g.fillStyle = '#6B6358'; g.font = `400 30px ${sans}`;
+  const words = [...c.line];
+  let line = '', y = 1170;
+  for (const ch of words) {
+    if (g.measureText(line + ch).width > W - 300) { g.fillText(line, W / 2, y); line = ''; y += 48; }
+    line += ch;
+  }
+  if (line) g.fillText(line, W / 2, y);
+  g.fillStyle = '#9A9184'; g.font = `400 24px ${sans}`;
+  g.fillText(`${fmtDate(Date.now()).slice(0, 10)}　第十二組　課堂提案示意`, W / 2, H - 120);
+  return new Promise(res => cv.toBlob(b => res(b), 'image/png'));
+}
+
+let certUrl = null;
+
+function certView(id) {
+  const r = REWARDS.find(x => x.id === id && x.type === 'cert');
+  if (!r) return notFound();
+  setTabs('badges');
+  const count = store.earnedBadges().size;
+  if (count < r.need) {
+    view.innerHTML = `<section class="page"><a class="link back" href="#/badges">← 徽章</a><h1 class="title">還沒集滿</h1><p class="lead">集滿 ${r.need} 枚徽章才能領取「${r.name}」，目前有 ${count} 枚。</p><a class="btn btn-primary" href="#/games">去玩遊戲</a></section>`;
+    return;
+  }
+  view.innerHTML = `
+  <section class="page">
+    <a class="link back" href="#/badges">← 徽章</a>
+    <p class="eyebrow">電子證書</p>
+    <h1 class="title">${CERTS[id].title}</h1>
+    <label class="field">
+      <span>證書上的名字（可不填，最多 12 個字）</span>
+      <input id="cert-name" type="text" maxlength="12" autocomplete="off" value="${store.getName()}">
+    </label>
+    <p class="hint">名字只會存在這支手機，不會上傳到任何地方。</p>
+    <button type="button" class="btn btn-primary" id="make-cert">產生證書</button>
+    <div id="cert-out" class="cert-out"></div>
+  </section>`;
+  const input = document.getElementById('cert-name');
+  const out = document.getElementById('cert-out');
+  document.getElementById('make-cert').addEventListener('click', async () => {
+    const name = store.setName(input.value);
+    input.value = name;
+    out.innerHTML = '<p class="hint">產生中…</p>';
+    const blob = await drawCert(id, name);
+    if (!blob) { out.innerHTML = '<p class="hint">證書產生失敗，請再試一次。</p>'; return; }
+    if (certUrl) URL.revokeObjectURL(certUrl);
+    certUrl = URL.createObjectURL(blob);
+    out.innerHTML = `<img src="${certUrl}" alt="${CERTS[id].title}證書">
+      <a class="btn" href="${certUrl}" download="flyingcow-certificate.png">下載證書圖片</a>
+      <p class="hint">iPhone 請長按上面的證書圖片，選「加入照片」就能存到手機。</p>`;
   });
 }
 
@@ -749,6 +928,8 @@ function render() {
   else if (r.name === 'book') bookView();
   else if (r.name === 'badges') badgesView();
   else if (r.name === 'games') gamesView();
+  else if (r.name === 'voucher') voucherView(r.args[0]);
+  else if (r.name === 'cert') certView(r.args[0]);
   else if (r.name === 'quiz') quizView(r.args[0]);
   else if (r.name === 'sort') sortView(r.args[0]);
   else notFound();

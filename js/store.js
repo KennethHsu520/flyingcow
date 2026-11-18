@@ -1,11 +1,15 @@
 import { ANIMALS, BADGES, SCENES, TIMES } from './data.js';
+import { REWARDS } from './rewards.js';
+
+const VALID_REWARDS = new Set(REWARDS.map(r => r.id));
+const CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 
 const KEY = 'fnr-progress-v1';
 const VALID_ANIMALS = new Set(ANIMALS.map(a => a.id));
 const VALID_SCENES = new Set(Object.keys(SCENES.cow));
 
 function empty() {
-  return { seen: {}, correct: {}, quiz: {}, sort: {} };
+  return { seen: {}, correct: {}, quiz: {}, sort: {}, vouchers: {}, name: '' };
 }
 
 function sanitize(raw) {
@@ -29,6 +33,16 @@ function sanitize(raw) {
   if (raw.sort && typeof raw.sort === 'object') {
     for (const k of Object.keys(raw.sort)) if (VALID_ANIMALS.has(k) && raw.sort[k] === true) out.sort[k] = true;
   }
+  if (raw.vouchers && typeof raw.vouchers === 'object') {
+    for (const k of Object.keys(raw.vouchers)) {
+      const v = raw.vouchers[k];
+      if (!VALID_REWARDS.has(k) || !v || typeof v !== 'object') continue;
+      if (typeof v.code !== 'string' || !CODE_RE.test(v.code)) continue;
+      if (typeof v.issued !== 'number' || !Number.isFinite(v.issued)) continue;
+      out.vouchers[k] = { code: v.code, issued: v.issued, used: typeof v.used === 'number' && Number.isFinite(v.used) ? v.used : null };
+    }
+  }
+  if (typeof raw.name === 'string') out.name = cleanName(raw.name);
   return out;
 }
 
@@ -46,6 +60,50 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch {}
+}
+
+export function cleanName(v) {
+  return String(v || '').replace(/[<>&"'`\\/]/g, '').replace(/\s+/g, ' ').trim().slice(0, 12);
+}
+
+export function getName() {
+  return state.name;
+}
+
+export function setName(v) {
+  state.name = cleanName(v);
+  save();
+  return state.name;
+}
+
+function makeCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const buf = new Uint32Array(8);
+  crypto.getRandomValues(buf);
+  const c = [...buf].map(n => chars[n % chars.length]).join('');
+  return c.slice(0, 4) + '-' + c.slice(4);
+}
+
+export function voucher(id) {
+  return state.vouchers[id] || null;
+}
+
+export function issueVoucher(id) {
+  const r = REWARDS.find(x => x.id === id);
+  if (!r || earnedBadges().size < r.need) return null;
+  if (!state.vouchers[id]) {
+    state.vouchers[id] = { code: makeCode(), issued: Date.now(), used: null };
+    save();
+  }
+  return state.vouchers[id];
+}
+
+export function redeemVoucher(id) {
+  const v = state.vouchers[id];
+  if (!v || v.used) return v;
+  v.used = Date.now();
+  save();
+  return v;
 }
 
 export function markSeen(animalId) {
