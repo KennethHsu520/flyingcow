@@ -783,20 +783,33 @@ function arContext() {
   return arCtx || currentCtx();
 }
 
+const LEAF = '<svg viewBox="0 0 40 40"><path d="M6 34 C6 16 18 6 34 6 C34 24 22 34 6 34 Z" fill="#8FA56F" stroke="#2B2620" stroke-width="2"/><path d="M8 32 L28 12" stroke="#2B2620" stroke-width="1.6" fill="none"/></svg>';
+const PAW = '<svg viewBox="0 0 40 40"><ellipse cx="20" cy="26" rx="8" ry="9" fill="#B49B80"/><circle cx="10" cy="14" r="4" fill="#B49B80"/><circle cx="17" cy="9" r="4" fill="#B49B80"/><circle cx="25" cy="9" r="4" fill="#B49B80"/><circle cx="31" cy="15" r="3.6" fill="#B49B80"/></svg>';
+const HEART = '<svg viewBox="0 0 40 40"><path d="M20 34 C8 25 4 18 4 13 C4 8 8 5 12.5 5 C16 5 18.5 7 20 10 C21.5 7 24 5 27.5 5 C32 5 36 8 36 13 C36 18 32 25 20 34 Z" fill="#E9B7A6" stroke="#2B2620" stroke-width="2"/></svg>';
+const BLADE = i => `<svg viewBox="0 0 20 60" style="left:${100 + i * 66}px;animation-delay:${(i % 4) * -0.5}s"><path d="M10 60 C8 40 4 24 2 6 M10 60 C12 38 15 22 18 10" stroke="#6E8A52" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`;
+const SUN_FX = '<svg viewBox="0 0 120 120"><g class="rays" stroke="#E9A25F" stroke-width="6" stroke-linecap="round">' + Array.from({ length: 12 }, (_, i) => { const t = i * Math.PI / 6; return `<line x1="${60 + Math.cos(t) * 38}" y1="${60 + Math.sin(t) * 38}" x2="${60 + Math.cos(t) * 54}" y2="${60 + Math.sin(t) * 54}"/>`; }).join('') + '</g><circle cx="60" cy="60" r="26" fill="#E9A25F" stroke="#2B2620" stroke-width="3"/></svg>';
+const CLOUD = '<svg viewBox="0 0 140 90"><path d="M24 70 C10 70 6 52 20 46 C18 28 40 20 52 32 C58 14 90 14 94 36 C112 32 126 48 116 62 C114 68 108 70 102 70 Z" fill="#FBF9F4" stroke="#2B2620" stroke-width="3"/><path d="M10 84 Q30 78 50 84 T90 84" stroke="#9FB2A8" stroke-width="3" fill="none" stroke-linecap="round"/></svg>';
+const FX = {
+  cow: () => `<span class="puff p1">哞～</span><span class="puff p2">哞～</span><div class="grass">${Array.from({ length: 12 }, (_, i) => BLADE(i)).join('')}</div>`,
+  goat: () => `${[0, 1, 2, 3, 4, 5].map(i => `<i class="leaf l${i}">${LEAF}</i>`).join('')}<span class="puff p1">咩～</span><span class="puff p2">咩～</span>`,
+  rabbit: () => `<div class="paws">${[0, 1, 2, 3, 4, 5].map(i => `<i class="paw w${i}">${PAW}</i>`).join('')}</div><i class="hop h1">${HEART}</i><i class="hop h2">${HEART}</i><span class="puff p1">嚼嚼～</span>`
+};
+
 function buildOverlay(a) {
   const el = document.createElement('div');
-  el.className = 'ar-card';
+  el.className = `ar-card ar-${a.id}`;
   el.style.visibility = 'hidden';
   el.innerHTML = `
     <div class="ar-plate"></div>
+    <div class="ar-photo"></div>
+    <p class="ar-bubble"></p>
+    <div class="ar-weather"><span class="w-hot">${SUN_FX}</span><span class="w-cool">${CLOUD}</span></div>
+    <div class="ar-fx">${FX[a.id]()}</div>
+    <div class="ar-cheer">${[0, 1, 2, 3, 4].map(i => `<i class="c${i}">${HEART}</i>`).join('')}</div>
     <div class="ar-base">
       <p class="ar-chip"></p>
       <p class="ar-tip"><span>小知識</span><b></b></p>
-    </div>
-    <div class="ar-stand"><div class="ar-stand-in">
-      <div class="ar-photo"></div>
-      <p class="ar-bubble"></p>
-    </div></div>`;
+    </div>`;
   overlayEls[a.id] = el;
   return el;
 }
@@ -808,6 +821,15 @@ function fillOverlay(a, el, { pop = true, bubble = null } = {}) {
   el.querySelector('.ar-bubble').classList.toggle('cheer', !!bubble);
   el.querySelector('.ar-chip').textContent = `${timeLabel(ctx.time)}・${weatherLabel(ctx.weather)}　No.${a.no} ${a.name}`;
   el.querySelector('.ar-tip b').textContent = s.tip;
+  el.classList.toggle('is-hot', ctx.weather === 'hot');
+  el.classList.toggle('is-cool', ctx.weather !== 'hot');
+  if (bubble) {
+    el.classList.remove('cheering');
+    void el.offsetWidth;
+    el.classList.add('cheering');
+    clearTimeout(el._cheer);
+    el._cheer = setTimeout(() => el.classList.remove('cheering'), 1800);
+  }
   const pn = photoName(a.id, ctx);
   const box = el.querySelector('.ar-photo');
   const html = PHOTOS.has(pn) ? photoTag(pn) : animalFigure(a.id, s.pose);
@@ -920,20 +942,6 @@ function onFound(a, el) {
   if (!dayTimer) foundSheet(a, first ? `<p class="sheet-new">${newBadges.length ? `發現全部觀察牌！獲得新徽章「${newBadges.map(b => b.name).join('、')}」` : `發現新的觀察牌：No.${a.no} ${a.name}`}</p>` : '');
 }
 
-const STAND_MAX = 62;
-
-function onFrame(el, e) {
-  const len = Math.hypot(e[8], e[9], e[10]);
-  if (!len) return;
-  const facing = Math.abs(e[10]) / len;
-  const k = Math.min(1, Math.max(0, (0.92 - facing) / 0.32));
-  const deg = Math.round(k * STAND_MAX);
-  if (el._stand !== deg) {
-    el._stand = deg;
-    el.style.setProperty('--stand', `-${deg}deg`);
-  }
-}
-
 function onLost() {
   scanFrame.classList.remove('found');
   if (scanSheet.hidden) scanStatus.textContent = '把觀察牌放進框內';
@@ -1011,7 +1019,7 @@ async function openScanner() {
   stopDay();
   renderScanCtx();
   scanStatus.textContent = '正在開啟相機…';
-  const r = await startScan(arBox, { buildOverlay, onFound, onLost, onFrame });
+  const r = await startScan(arBox, { buildOverlay, onFound, onLost });
   if (r === 'cancelled') return;
   if (route().name !== 'scan') { stopScan(); return; }
   if (r === 'ok') {
