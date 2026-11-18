@@ -793,10 +793,10 @@ function buildOverlay(a) {
       <p class="ar-chip"></p>
       <p class="ar-tip"><span>小知識</span><b></b></p>
     </div>
-    <div class="ar-stand">
+    <div class="ar-stand"><div class="ar-stand-in">
       <div class="ar-photo"></div>
       <p class="ar-bubble"></p>
-    </div>`;
+    </div></div>`;
   overlayEls[a.id] = el;
   return el;
 }
@@ -920,6 +920,20 @@ function onFound(a, el) {
   if (!dayTimer) foundSheet(a, first ? `<p class="sheet-new">${newBadges.length ? `發現全部觀察牌！獲得新徽章「${newBadges.map(b => b.name).join('、')}」` : `發現新的觀察牌：No.${a.no} ${a.name}`}</p>` : '');
 }
 
+const STAND_MAX = 62;
+
+function onFrame(el, e) {
+  const len = Math.hypot(e[8], e[9], e[10]);
+  if (!len) return;
+  const facing = Math.abs(e[10]) / len;
+  const k = Math.min(1, Math.max(0, (0.92 - facing) / 0.32));
+  const deg = Math.round(k * STAND_MAX);
+  if (el._stand !== deg) {
+    el._stand = deg;
+    el.style.setProperty('--stand', `-${deg}deg`);
+  }
+}
+
 function onLost() {
   scanFrame.classList.remove('found');
   if (scanSheet.hidden) scanStatus.textContent = '把觀察牌放進框內';
@@ -981,7 +995,7 @@ scanner.addEventListener('click', e => {
   if (!b) return;
   if (b.dataset.sheet === 'close') {
     hideSheet();
-    scanStatus.textContent = '把觀察牌放進框內';
+    scanStatus.textContent = scanFrame.classList.contains('found') ? '' : '把觀察牌放進框內';
   }
   if (b.dataset.sheet === 'pick') showSheet(pickerHTML());
 });
@@ -997,7 +1011,7 @@ async function openScanner() {
   stopDay();
   renderScanCtx();
   scanStatus.textContent = '正在開啟相機…';
-  const r = await startScan(arBox, { buildOverlay, onFound, onLost });
+  const r = await startScan(arBox, { buildOverlay, onFound, onLost, onFrame });
   if (r === 'cancelled') return;
   if (route().name !== 'scan') { stopScan(); return; }
   if (r === 'ok') {

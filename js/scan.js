@@ -44,7 +44,7 @@ function teardown(m) {
   });
 }
 
-export async function startScan(container, { buildOverlay, onFound, onLost }) {
+export async function startScan(container, { buildOverlay, onFound, onLost, onFrame }) {
   const my = ++session;
   const support = cameraSupport();
   if (support !== 'ok') return support;
@@ -68,16 +68,21 @@ export async function startScan(container, { buildOverlay, onFound, onLost }) {
       filterBeta: 0.001
     });
     mind = m;
+    const tracked = [];
     ANIMALS.forEach((a, i) => {
       const anchor = m.addCSSAnchor(i);
       const el = buildOverlay(a);
+      tracked.push({ anchor, el });
       anchor.group.add(new CSS3DObject(el));
       anchor.onTargetFound = () => { if (mind === m) onFound(a, el); };
       anchor.onTargetLost = () => { if (mind === m) onLost(a, el); };
     });
     await m.start();
     if (my !== session || mind !== m) { teardown(m); return 'cancelled'; }
-    m.renderer.setAnimationLoop(() => m.cssRenderer.render(m.cssScene, m.camera));
+    m.renderer.setAnimationLoop(() => {
+      if (onFrame) for (const t of tracked) if (t.anchor.visible) onFrame(t.el, t.anchor.group.matrix.elements);
+      m.cssRenderer.render(m.cssScene, m.camera);
+    });
     return 'ok';
   } catch {
     teardown(m);

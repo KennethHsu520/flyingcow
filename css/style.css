@@ -739,3 +739,10 @@ h3 { font-size: 16px; font-weight: 500; }
 .scan-sheet .actions .btn { min-height: 44px; font-size: 14px; }
 .scan-sheet .day-track { margin-bottom: 8px; }
 .scan-sheet .sheet-x { width: 36px; height: 36px; }
+
+.ar-card { --stand: 0deg; }
+.ar-stand { transform: rotateX(var(--stand)); transition: transform .35s ease-out; }
+.ar-stand-in { position: absolute; inset: 0; transform-origin: 50% 100%; }
+.ar-card.pop .ar-stand { animation: none; }
+.ar-card.pop .ar-stand-in { animation: arpop .55s cubic-bezier(.2, .8, .3, 1.1) both; }
+@keyframes arpop { from { opacity: 0; transform: translateY(30px) scale(.94); } to { opacity: 1; transform: none; } }
