@@ -1,0 +1,1 @@
+export const PHOTOS = new Set(["cow-evening-cool", "cow-evening-hot", "cow-morning-cool", "cow-morning-hot", "cow-noon-cool", "cow-noon-hot", "goat-evening-cool", "goat-evening-hot", "goat-morning-cool", "goat-morning-hot", "goat-noon-cool", "goat-noon-hot", "hero", "rabbit-morning-cool", "rabbit-morning-hot", "rabbit-noon-cool", "rabbit-noon-hot"]);

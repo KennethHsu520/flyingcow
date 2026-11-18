@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.open-meteo.com; media-src 'self' blob: mediastream:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#F7F4EE">
+<meta name="description" content="飛牛牧場動物作息大挑戰：掃描觀察牌，依時間和天氣認識乳牛、山羊、兔子的作息。">
+<title>動物作息大挑戰｜飛牛牧場</title>
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/serif.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/style.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <a class="wordmark" href="#/">動物作息大挑戰</a>
+    <span class="ctx" id="ctx"></span>
+  </header>
+  <main id="view"></main>
+  <nav class="tabs" aria-label="主選單">
+    <a href="#/" data-tab="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 L12 4 L20 11 V20 H14 V14 H10 V20 H4 Z"/></svg><span>首頁</span></a>
+    <a href="#/scan" data-tab="scan"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8 V4 H8 M16 4 H20 V8 M20 16 V20 H16 M8 20 H4 V16"/><circle cx="12" cy="12" r="3.2"/></svg><span>觀察</span></a>
+    <a href="#/book" data-tab="book"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4 H17 A2 2 0 0 1 19 6 V20 H7 A2 2 0 0 1 5 18 Z M5 18 A2 2 0 0 1 7 16 H19"/></svg><span>圖鑑</span></a>
+    <a href="#/badges" data-tab="badges"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="10" r="6"/><path d="M8.5 15 L7 21 L12 18.5 L17 21 L15.5 15"/></svg><span>徽章</span></a>
+  </nav>
+</div>
+<section id="scanner" hidden aria-label="掃描觀察牌">
+  <div id="ar"></div>
+  <a class="scan-close" href="#/" aria-label="關閉相機"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18"/></svg></a>
+  <div class="scan-ctx" id="scan-ctx" aria-label="選擇時段和天氣"></div>
+  <div class="scan-frame" id="scan-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="scan-bottom">
+    <p class="scan-status" id="scan-status" role="status"></p>
+    <button type="button" class="scan-pick" data-sheet="pick">沒有觀察牌？直接選動物</button>
+  </div>
+  <div class="scan-sheet" id="scan-sheet" hidden></div>
+</section>
+</body>
+</html>
