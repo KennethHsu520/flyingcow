@@ -179,7 +179,9 @@ export function badgeSVG(kind, earned) {
     goat: '<path d="M44 46 C44 40 50 36 60 36 C70 36 76 40 76 46 L74 64 C72 72 66 76 60 76 C54 76 48 72 46 64 Z"/><path d="M48 40 C44 32 36 30 32 32 M72 40 C76 32 84 30 88 32"/><path d="M56 76 L60 86 L64 76"/>',
     rabbit: '<ellipse cx="60" cy="62" rx="16" ry="14"/><path d="M52 50 C48 38 48 28 52 26 C58 28 58 40 56 50 M68 50 C72 38 72 28 68 26 C62 28 62 40 64 50"/>',
     clock: '<circle cx="60" cy="58" r="20"/><path d="M60 46 L60 58 L70 64"/>',
-    leaf: '<path d="M40 74 C40 50 56 38 80 38 C80 62 66 76 42 76 Z"/><path d="M44 72 L68 48"/>'
+    leaf: '<path d="M40 74 C40 50 56 38 80 38 C80 62 66 76 42 76 Z"/><path d="M44 72 L68 48"/>',
+    bolt: '<path d="M64 34 L46 62 L60 62 L54 86 L76 54 L62 54 Z"/>',
+    sun: '<circle cx="60" cy="60" r="11"/><path d="M60 38 V44 M60 76 V82 M38 60 H44 M76 60 H82 M45 45 L49 49 M71 71 L75 75 M45 75 L49 71 M71 49 L75 45"/>'
   };
   return `
 <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

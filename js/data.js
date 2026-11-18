@@ -277,11 +277,13 @@ export const SCENES = {
 };
 
 export const BADGES = [
-  { id: 'cow', icon: 'cow', name: '乳牛觀察員', rule: '答對 3 個乳牛情境' },
-  { id: 'goat', icon: 'goat', name: '山羊觀察員', rule: '答對 3 個山羊情境' },
-  { id: 'rabbit', icon: 'rabbit', name: '兔子觀察員', rule: '答對 3 個兔子情境' },
-  { id: 'allday', icon: 'clock', name: '早午晚都來過', rule: '在早晨、正午、傍晚各答對 1 題' },
-  { id: 'master', icon: 'leaf', name: '牧場小專家', rule: '18 個情境全部答對' }
+  { id: 'cow', icon: 'cow', name: '乳牛觀察員', rule: '完成 3 個乳牛情境' },
+  { id: 'goat', icon: 'goat', name: '山羊觀察員', rule: '完成 3 個山羊情境' },
+  { id: 'rabbit', icon: 'rabbit', name: '兔子觀察員', rule: '完成 3 個兔子情境' },
+  { id: 'allday', icon: 'clock', name: '早午晚都來過', rule: '早晨、正午、傍晚的情境各完成 1 個' },
+  { id: 'master', icon: 'leaf', name: '牧場小專家', rule: '18 個情境全部完成' },
+  { id: 'quiz', icon: 'bolt', name: '快問快答高手', rule: '快問快答拿到 6 / 6' },
+  { id: 'sort', icon: 'sun', name: '作息小達人', rule: '三種動物的作息排排看都完成' }
 ];
 
 export const RANCH = { lat: 24.48, lon: 120.74, place: '苗栗通霄' };

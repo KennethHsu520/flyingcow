@@ -5,7 +5,7 @@ const VALID_ANIMALS = new Set(ANIMALS.map(a => a.id));
 const VALID_SCENES = new Set(Object.keys(SCENES.cow));
 
 function empty() {
-  return { seen: {}, correct: {} };
+  return { seen: {}, correct: {}, quiz: {}, sort: {} };
 }
 
 function sanitize(raw) {
@@ -19,6 +19,15 @@ function sanitize(raw) {
       const [a, s] = k.split(':');
       if (VALID_ANIMALS.has(a) && VALID_SCENES.has(s) && raw.correct[k] === true) out.correct[k] = true;
     }
+  }
+  if (raw.quiz && typeof raw.quiz === 'object') {
+    for (const k of Object.keys(raw.quiz)) {
+      const v = raw.quiz[k];
+      if (VALID_ANIMALS.has(k) && Number.isInteger(v) && v >= 0 && v <= 6) out.quiz[k] = v;
+    }
+  }
+  if (raw.sort && typeof raw.sort === 'object') {
+    for (const k of Object.keys(raw.sort)) if (VALID_ANIMALS.has(k) && raw.sort[k] === true) out.sort[k] = true;
   }
   return out;
 }
@@ -63,7 +72,40 @@ export function earnedBadges() {
   for (const a of ANIMALS) if (keys.filter(k => k.startsWith(a.id + ':')).length >= 3) earned.add(a.id);
   if (TIMES.every(t => keys.some(k => k.split(':')[1].startsWith(t.id + '-')))) earned.add('allday');
   if (keys.length >= ANIMALS.length * VALID_SCENES.size) earned.add('master');
+  if (Object.values(state.quiz).some(v => v >= 6)) earned.add('quiz');
+  if (ANIMALS.every(a => state.sort[a.id])) earned.add('sort');
   return earned;
+}
+
+function diff(before) {
+  const after = earnedBadges();
+  return BADGES.filter(b => after.has(b.id) && !before.has(b.id));
+}
+
+export function quizBest(animalId) {
+  return state.quiz[animalId] ?? null;
+}
+
+export function recordQuiz(animalId, score) {
+  if (!VALID_ANIMALS.has(animalId) || !Number.isInteger(score) || score < 0 || score > 6) return [];
+  const before = earnedBadges();
+  if (state.quiz[animalId] == null || score > state.quiz[animalId]) {
+    state.quiz[animalId] = score;
+    save();
+  }
+  return diff(before);
+}
+
+export function sortDone(animalId) {
+  return !!state.sort[animalId];
+}
+
+export function recordSort(animalId) {
+  if (!VALID_ANIMALS.has(animalId)) return [];
+  const before = earnedBadges();
+  state.sort[animalId] = true;
+  save();
+  return diff(before);
 }
 
 export function recordCorrect(animalId, sceneKey) {
