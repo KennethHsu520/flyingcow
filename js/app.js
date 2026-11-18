@@ -775,28 +775,54 @@ function notFound() {
 }
 
 const overlayEls = {};
+let arCtx = null;
+let dayTimer = null;
+let arQuiz = null;
+
+function arContext() {
+  return arCtx || currentCtx();
+}
 
 function buildOverlay(a) {
   const el = document.createElement('div');
   el.className = 'ar-card';
   el.style.visibility = 'hidden';
-  el.innerHTML = `<div class="ar-panel"><p class="ar-bubble"></p><div class="ar-figure"></div><div class="ar-tip"><span>小知識</span><p></p></div></div>`;
+  el.innerHTML = `
+    <div class="ar-plate"></div>
+    <div class="ar-base">
+      <p class="ar-chip"></p>
+      <p class="ar-tip"><span>小知識</span><b></b></p>
+    </div>
+    <div class="ar-stand">
+      <div class="ar-photo"></div>
+      <p class="ar-bubble"></p>
+    </div>`;
   overlayEls[a.id] = el;
   return el;
 }
 
-function fillOverlay(a, el) {
-  const ctx = currentCtx();
+function fillOverlay(a, el, { pop = true, bubble = null } = {}) {
+  const ctx = arContext();
   const s = SCENES[a.id][sceneKey(ctx)];
-  el.querySelector('.ar-bubble').textContent = s.state;
-  el.querySelector('.ar-tip p').textContent = s.tip;
+  el.querySelector('.ar-bubble').textContent = bubble || s.state;
+  el.querySelector('.ar-bubble').classList.toggle('cheer', !!bubble);
+  el.querySelector('.ar-chip').textContent = `${timeLabel(ctx.time)}・${weatherLabel(ctx.weather)}　No.${a.no} ${a.name}`;
+  el.querySelector('.ar-tip b').textContent = s.tip;
   const pn = photoName(a.id, ctx);
-  const hasPhoto = PHOTOS.has(pn);
-  el.classList.toggle('has-photo', hasPhoto);
-  el.querySelector('.ar-figure').innerHTML = hasPhoto ? photoTag(pn) : animalFigure(a.id, s.pose);
-  el.classList.remove('pop');
-  void el.offsetWidth;
-  el.classList.add('pop');
+  const box = el.querySelector('.ar-photo');
+  const html = PHOTOS.has(pn) ? photoTag(pn) : animalFigure(a.id, s.pose);
+  if (box.dataset.key !== pn) {
+    box.dataset.key = pn;
+    box.innerHTML = html;
+    box.classList.remove('fade');
+    void box.offsetWidth;
+    box.classList.add('fade');
+  }
+  if (pop) {
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+  }
 }
 
 let lastFound = null;
@@ -807,35 +833,91 @@ function showSheet(html) {
 }
 
 function hideSheet() {
+  stopDay();
   scanSheet.hidden = true;
   scanSheet.innerHTML = '';
 }
 
 function renderScanCtx() {
   const ctx = currentCtx();
-  scanCtx.innerHTML = segHTML('time', TIMES, ctx.time) + segHTML('weather', WEATHERS, ctx.weather);
+  const found = store.scannedCount();
+  scanCtx.innerHTML = segHTML('time', TIMES, ctx.time) + segHTML('weather', WEATHERS, ctx.weather) +
+    `<p class="scan-collect"><span class="pips">${ANIMALS.map(x => `<i class="${store.isScanned(x.id) ? 'on' : ''}"></i>`).join('')}</span>已發現 ${found} / ${ANIMALS.length} 張觀察牌</p>`;
 }
 
-function foundSheet(a) {
-  const ctx = currentCtx();
+function newArQuiz(id) {
+  const list = QUIZ[id];
+  return { id, item: list[Math.floor(Math.random() * list.length)], answer: undefined };
+}
+
+function foundSheet(a, extra = '') {
+  const ctx = arContext();
   const s = SCENES[a.id][sceneKey(ctx)];
+  if (!arQuiz || arQuiz.id !== a.id) arQuiz = newArQuiz(a.id);
+  const q = arQuiz;
+  const answered = q.answer !== undefined;
+  const ok = answered && q.answer === q.item.answer;
   showSheet(`
-    <p class="eyebrow">No.${a.no}　${timeLabel(ctx.time)}・${weatherLabel(ctx.weather)}</p>
-    <p class="sheet-title">${a.name}</p>
-    <p class="sheet-state">「${s.state}」</p>
+    ${extra}
+    <div class="sheet-head">
+      <div>
+        <p class="eyebrow">No.${a.no}　${timeLabel(ctx.time)}・${weatherLabel(ctx.weather)}</p>
+        <p class="sheet-title">${a.name}</p>
+      </div>
+      <button type="button" class="sheet-x" data-sheet="close" aria-label="繼續掃描"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18"/></svg></button>
+    </div>
+    <div class="ar-q">
+      <p class="ar-q-label">AR 小問答</p>
+      <p class="ar-q-text">${q.item.text}</p>
+      ${answered
+        ? `<p class="ar-q-res ${ok ? 'is-ok' : 'is-no'}"><b>${ok ? '答對了' : '答錯了'}</b>${q.item.note}</p>
+           <button type="button" class="link" data-ar="nextq">再一題</button>`
+        : `<div class="ar-q-btns"><button type="button" data-ar="o">對</button><button type="button" data-ar="x">錯</button></div>`}
+    </div>
     <div class="actions">
+      <button type="button" class="btn" data-ar="day">${dayTimer ? '播放中…' : '看牠的一天'}</button>
       <a class="btn btn-primary" href="#/play/${a.id}">開始挑戰</a>
-      <button type="button" class="btn" data-sheet="close">繼續掃描</button>
     </div>`);
 }
 
+function stopDay() {
+  if (dayTimer) { clearInterval(dayTimer); dayTimer = null; }
+  arCtx = null;
+}
+
+function playDay() {
+  if (!lastFound) return;
+  const a = byId[lastFound];
+  const el = overlayEls[a.id];
+  stopDay();
+  const weather = currentCtx().weather;
+  let i = 0;
+  const step = () => {
+    if (i >= TIMES.length) {
+      stopDay();
+      fillOverlay(a, el, { pop: false });
+      foundSheet(a);
+      return;
+    }
+    arCtx = { time: TIMES[i].id, weather };
+    fillOverlay(a, el, { pop: false });
+    foundSheet(a, `<div class="day-track">${TIMES.map((t, k) => `<span class="${k < i ? 'done' : k === i ? 'on' : ''}">${t.label}</span>`).join('<i></i>')}</div>`);
+    i += 1;
+  };
+  step();
+  dayTimer = setInterval(step, 3000);
+}
+
 function onFound(a, el) {
-  fillOverlay(a, el);
+  const first = !store.isScanned(a.id);
   lastFound = a.id;
+  if (!dayTimer) fillOverlay(a, el);
   scanFrame.classList.add('found');
   scanStatus.textContent = '';
-  foundSheet(a);
+  const newBadges = store.markScanned(a.id);
   store.markSeen(a.id);
+  renderScanCtx();
+  if (!dayTimer) foundSheet(a, first ? `<p class="sheet-new">${newBadges.length ? `發現全部觀察牌！獲得新徽章「${newBadges.map(b => b.name).join('、')}」` : `發現新的觀察牌：No.${a.no} ${a.name}`}</p>` : '');
 }
 
 function onLost() {
@@ -866,12 +948,34 @@ scanner.addEventListener('click', e => {
   const c = e.target.closest('[data-time], [data-weather]');
   if (c && scanCtx.contains(c)) {
     chosen = { ...currentCtx(), ...(c.dataset.time ? { time: c.dataset.time } : { weather: c.dataset.weather }) };
+    stopDay();
     renderScanCtx();
-    if (lastFound && overlayEls[lastFound] && overlayEls[lastFound].style.visibility === 'visible') {
+    if (lastFound && overlayEls[lastFound]) {
       fillOverlay(byId[lastFound], overlayEls[lastFound]);
       if (!scanSheet.hidden && scanSheet.querySelector('.sheet-title')) foundSheet(byId[lastFound]);
     }
     return;
+  }
+  const ar = e.target.closest('[data-ar]');
+  if (ar && lastFound) {
+    const a = byId[lastFound];
+    const el = overlayEls[a.id];
+    if (ar.dataset.ar === 'day') { if (!dayTimer) playDay(); return; }
+    if ((ar.dataset.ar === 'o' || ar.dataset.ar === 'x') && arQuiz && arQuiz.answer === undefined) {
+      arQuiz.answer = ar.dataset.ar === 'o';
+      const ok = arQuiz.answer === arQuiz.item.answer;
+      buzz(ok);
+      fillOverlay(a, el, { pop: false, bubble: ok ? reactionFor(a.id) : '再想想看～' });
+      if (!dayTimer) foundSheet(a);
+      return;
+    }
+    if (ar.dataset.ar === 'nextq') {
+      const prev = arQuiz && arQuiz.item;
+      do { arQuiz = newArQuiz(a.id); } while (QUIZ[a.id].length > 1 && arQuiz.item === prev);
+      fillOverlay(a, el, { pop: false });
+      if (!dayTimer) foundSheet(a);
+      return;
+    }
   }
   const b = e.target.closest('[data-sheet]');
   if (!b) return;
@@ -889,6 +993,8 @@ async function openScanner() {
   hideSheet();
   scanFrame.classList.remove('found');
   lastFound = null;
+  arQuiz = null;
+  stopDay();
   renderScanCtx();
   scanStatus.textContent = '正在開啟相機…';
   const r = await startScan(arBox, { buildOverlay, onFound, onLost });

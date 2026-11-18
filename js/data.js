@@ -283,7 +283,8 @@ export const BADGES = [
   { id: 'allday', icon: 'clock', name: '早午晚都來過', rule: '早晨、正午、傍晚的情境各完成 1 個' },
   { id: 'master', icon: 'leaf', name: '牧場小專家', rule: '18 個情境全部完成' },
   { id: 'quiz', icon: 'bolt', name: '快問快答高手', rule: '快問快答拿到 6 / 6' },
-  { id: 'sort', icon: 'sun', name: '作息小達人', rule: '三種動物的作息排排看都完成' }
+  { id: 'sort', icon: 'sun', name: '作息小達人', rule: '三種動物的作息排排看都完成' },
+  { id: 'cards', icon: 'leaf', name: '觀察牌收集家', rule: '用相機掃過全部 3 張觀察牌' }
 ];
 
 export const RANCH = { lat: 24.48, lon: 120.74, place: '苗栗通霄' };

@@ -5,20 +5,21 @@ export const MEDAL_PHOTO = {
   allday: 'cow-evening-cool',
   master: 'hero',
   quiz: 'goat-evening-hot',
-  sort: 'rabbit-noon-cool'
+  sort: 'rabbit-noon-cool',
+  cards: 'cow-noon-hot'
 };
 
 export const REWARDS = [
   { id: 'cert1', need: 1, type: 'cert', name: '電子「小小觀察員」證書', desc: '存到手機的數位證書，可以分享給家人。', icon: 'cert' },
   { id: 'yogurt', need: 3, type: 'voucher', name: '飲優格 1 瓶', desc: '到牧場服務台出示兌換券，由工作人員核銷。', icon: 'yogurt' },
   { id: 'pudding', need: 5, type: 'voucher', name: '飛牛白布丁 1 個', desc: '到牧場服務台出示兌換券，由工作人員核銷。', icon: 'pudding' },
-  { id: 'diy', need: 7, type: 'voucher', name: '彩繪肥牛 DIY 體驗折扣券', desc: '折扣內容依牧場公告，到 DIY 教室出示兌換券。', icon: 'diy' },
-  { id: 'cert2', need: 7, type: 'cert', name: '電子「飛牛小牧場主」證書', desc: '集滿全部徽章才拿得到的最高榮譽。', icon: 'crown' }
+  { id: 'diy', need: 8, type: 'voucher', name: '彩繪肥牛 DIY 體驗折扣券', desc: '折扣內容依牧場公告，到 DIY 教室出示兌換券。', icon: 'diy' },
+  { id: 'cert2', need: 8, type: 'cert', name: '電子「飛牛小牧場主」證書', desc: '集滿全部徽章才拿得到的最高榮譽。', icon: 'crown' }
 ];
 
 export const CERTS = {
   cert1: { title: '小小觀察員', line: '認真觀察牧場動物，了解牠們在不同時間與天氣的需求。' },
-  cert2: { title: '飛牛小牧場主', line: '集滿全部七枚徽章，是乳牛、山羊和兔子最好的朋友。' }
+  cert2: { title: '飛牛小牧場主', line: '集滿全部八枚徽章，是乳牛、山羊和兔子最好的朋友。' }
 };
 
 const ICONS = {

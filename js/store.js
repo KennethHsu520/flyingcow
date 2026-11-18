@@ -9,7 +9,7 @@ const VALID_ANIMALS = new Set(ANIMALS.map(a => a.id));
 const VALID_SCENES = new Set(Object.keys(SCENES.cow));
 
 function empty() {
-  return { seen: {}, correct: {}, quiz: {}, sort: {}, vouchers: {}, name: '' };
+  return { seen: {}, correct: {}, quiz: {}, sort: {}, vouchers: {}, name: '', scanned: {} };
 }
 
 function sanitize(raw) {
@@ -43,6 +43,9 @@ function sanitize(raw) {
     }
   }
   if (typeof raw.name === 'string') out.name = cleanName(raw.name);
+  if (raw.scanned && typeof raw.scanned === 'object') {
+    for (const k of Object.keys(raw.scanned)) if (VALID_ANIMALS.has(k) && raw.scanned[k] === true) out.scanned[k] = true;
+  }
   return out;
 }
 
@@ -132,12 +135,29 @@ export function earnedBadges() {
   if (keys.length >= ANIMALS.length * VALID_SCENES.size) earned.add('master');
   if (Object.values(state.quiz).some(v => v >= 6)) earned.add('quiz');
   if (ANIMALS.every(a => state.sort[a.id])) earned.add('sort');
+  if (ANIMALS.every(a => state.scanned[a.id])) earned.add('cards');
   return earned;
 }
 
 function diff(before) {
   const after = earnedBadges();
   return BADGES.filter(b => after.has(b.id) && !before.has(b.id));
+}
+
+export function isScanned(animalId) {
+  return !!state.scanned[animalId];
+}
+
+export function scannedCount() {
+  return ANIMALS.filter(a => state.scanned[a.id]).length;
+}
+
+export function markScanned(animalId) {
+  if (!VALID_ANIMALS.has(animalId) || state.scanned[animalId]) return [];
+  const before = earnedBadges();
+  state.scanned[animalId] = true;
+  save();
+  return diff(before);
 }
 
 export function quizBest(animalId) {
